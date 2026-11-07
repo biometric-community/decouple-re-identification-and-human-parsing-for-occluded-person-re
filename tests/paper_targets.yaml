@@ -1,0 +1,20 @@
+# Dou et al., "Decouple Re-Identification and Human Parsing for Occluded Person
+# Re-Identification", IEEE TBIOM 2026, doi:10.1109/TBIOM.2026.3680760. Numbers are from
+# the preprint, arXiv:2401.18032; the journal version may differ slightly.
+source: arXiv:2401.18032
+tolerance_pp: 1.0
+
+# Table 3.
+market1501:
+  map: 89.5
+  rank1: 95.6
+
+# Sec. 3.4 and 4.1.
+training:
+  lr: 0.00035
+  lr_drops: [40, 70]
+  epochs: 120
+  margin: 0.3
+  label_smoothing: 0.1
+  lambda_parse: 0.4
+holistic_parts: 5
