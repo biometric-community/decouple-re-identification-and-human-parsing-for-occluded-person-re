@@ -39,13 +39,19 @@ def part_compactness_triplet(
     labels: torch.Tensor,
     margin: float = 0.3,
 ) -> torch.Tensor:
-    """PCT: average batch-hard triplet over part embeddings (B,K,D)."""
-    tri = BatchHardTriplet(margin=margin)
-    b, k, d = parts.shape
-    losses = []
-    for i in range(k):
-        losses.append(tri(parts[:, i, :], labels))
-    return torch.stack(losses).mean()
+    """PCT (Eq. 7): hinge on part-averaged hardest distances; parts are (B,K,D)."""
+    labels = labels.view(-1)
+    same = labels.unsqueeze(0).eq(labels.unsqueeze(1))
+    eye = torch.eye(labels.numel(), device=parts.device, dtype=torch.bool)
+    mask_pos, mask_neg = same & ~eye, ~same
+    valid = mask_pos.any(dim=1) & mask_neg.any(dim=1)
+    if not valid.any():
+        return parts.new_zeros(())
+    feats = F.normalize(parts, dim=-1).transpose(0, 1)  # (K,B,D)
+    dist = torch.cdist(feats, feats, p=2)
+    hardest_pos = dist.masked_fill(~mask_pos, -1.0).max(dim=2).values.mean(dim=0)
+    hardest_neg = dist.masked_fill(~mask_neg, 1e6).min(dim=2).values.mean(dim=0)
+    return F.relu(hardest_pos[valid] - hardest_neg[valid] + margin).mean()
 
 
 def drop_loss(
